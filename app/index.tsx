@@ -1,27 +1,38 @@
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { fetchPosts } from "../src/api/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 type Note = {
   id: string;
   title: string;
+  image?: string | null;
 };
 
 export default function HomeScreen() {
   const router = useRouter();
   const [notes, setNotes] = useState<Note[]>([]);
 
-  useEffect(() => {
-    fetchPosts().then((data) => {
-      setNotes(
-        data.map((p: any) => ({
-          id: String(p.id),
-          title: p.title,
-        }))
-      );
-    });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const loadNotes = async () => {
+        const stored = await AsyncStorage.getItem("notes");
+        if (stored) {
+          setNotes(JSON.parse(stored));
+        } else {
+          setNotes([]);
+        }
+      };
+
+      loadNotes();
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -32,19 +43,25 @@ export default function HomeScreen() {
         <Text style={styles.addButtonText}>+ Dodaj notatkę</Text>
       </Pressable>
 
-      <FlatList
-        data={notes}
-        keyExtractor={(item) => item.id}
-        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => router.push(`/details/${item.id}`)}
-            style={styles.noteItem}
-          >
-            <Text style={styles.noteTitle}>{item.title}</Text>
-          </Pressable>
-        )}
-      />
+      {notes.length === 0 ? (
+        <Text style={styles.emptyText}>
+          Brak zapisanych notatek
+        </Text>
+      ) : (
+        <FlatList
+          data={notes}
+          keyExtractor={(item) => item.id}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => router.push(`/details/${item.id}`)}
+              style={styles.noteItem}
+            >
+              <Text style={styles.noteTitle}>{item.title}</Text>
+            </Pressable>
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -73,5 +90,10 @@ const styles = StyleSheet.create({
   },
   noteTitle: {
     fontSize: 16,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#666",
+    marginTop: 40,
   },
 });

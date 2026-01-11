@@ -1,7 +1,15 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 
 export default function AddNoteScreen() {
   const router = useRouter();
@@ -9,13 +17,28 @@ export default function AddNoteScreen() {
   const [image, setImage] = useState<string | null>(null);
 
   async function takePhoto() {
-    const res = await ImagePicker.launchCameraAsync({
-      quality: 0.7,
-    });
-
+    const res = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (!res.canceled) {
       setImage(res.assets[0].uri);
     }
+  }
+
+  async function saveNote() {
+    if (!title.trim()) return;
+
+    const newNote = {
+      id: Date.now().toString(),
+      title,
+      image,
+    };
+
+    const existing = await AsyncStorage.getItem("notes");
+    const notes = existing ? JSON.parse(existing) : [];
+
+    notes.unshift(newNote);
+    await AsyncStorage.setItem("notes", JSON.stringify(notes));
+
+    router.back();
   }
 
   return (
@@ -32,13 +55,11 @@ export default function AddNoteScreen() {
         <Text style={styles.buttonText}>Zrób zdjęcie</Text>
       </Pressable>
 
-      {image && (
-        <Image source={{ uri: image }} style={styles.image} />
-      )}
+      {image && <Image source={{ uri: image }} style={styles.image} />}
 
       <Pressable
         style={[styles.button, styles.saveButton]}
-        onPress={() => router.back()}
+        onPress={saveNote}
       >
         <Text style={styles.buttonText}>Zapisz</Text>
       </Pressable>
